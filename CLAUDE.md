@@ -71,6 +71,7 @@ user message
 - [x] PR #4d-ii: book corpus + RAG-augmented LlmChatService + Program.cs wiring + smoke test
 - [x] PR #5: citations surfaced in chat UI; `IChatService` returns `ChatResponse` (Content + Citations)
 - [x] PR #6: eval set + heuristic runner + pre-guardrails baseline captured
+- [x] PR #7: hardened grounding system prompt extracted to `GroundedSystemPrompt`
 
 ## What's next
 
@@ -188,3 +189,29 @@ Add an entry per PR, like a tiny ADR. Format:
   alignment + minimal grounding prompt is genuinely strong; my eval
   baseline taught me heuristic rubrics produce false negatives, which
   PR #10's LLM-as-judge would mitigate at the production layer."
+- **2026-05-03 — System prompt extracted to `GroundedSystemPrompt` (PR #7).**
+  Considered: keep inline in `LlmChatService`. Picked extraction because
+  (a) the prompt is the single most interview-readable artefact in the
+  repo — "walk me through your guardrails" maps to "walk me through
+  these six rules"; (b) it's now independently unit-testable so we can
+  assert each rule survives refactoring; (c) PR #10's output judge can
+  reuse the same source-of-truth for what counts as compliant.
+- **2026-05-03 — Six explicit rules in the system prompt, each tied to an
+  eval case.** Source isolation, modern-medical-advice block, quotation
+  honesty (paraphrase ≠ quote), instruction-injection defence (with
+  example patterns), citation requirement (`[Section N]`), and prompt
+  non-disclosure. Each rule has a comment in `GroundedSystemPrompt`
+  pointing at the eval case(s) it's defending against — so the
+  guardrail story is **demonstrably grounded in the failure modes I
+  probed**, not handwaved.
+- **2026-05-03 — Prompt-based quote control has a ceiling, demonstrated
+  in manual testing.** Asked the bot about ventilation and it produced
+  an all-caps "quote" that combined two separate passages with reworded
+  phrasing — classic hallucinated quotation. Hardened Rule 3 to
+  explicitly forbid combining passages, changing capitalisation, or
+  adding emphasis. The deterministic fix lives in PR #10's output
+  judge, which mechanically verifies each quoted span appears verbatim
+  in CONTEXT. Honest interview narrative: "I tested the prompt
+  manually, found a residual failure mode, hardened the prompt slightly
+  AND scoped a deterministic post-hoc check for PR #10. Prompts can
+  ask; only verification can guarantee."

@@ -1,5 +1,6 @@
 using AskNightingale.Services.Embeddings;
 using AskNightingale.Services.Llm;
+using AskNightingale.Services.Prompts;
 using AskNightingale.Services.Rag;
 
 namespace AskNightingale.Services;
@@ -21,20 +22,14 @@ public class LlmChatService(
         // 2. Find the closest k chunks of the corpus.
         var results = await store.GetTopKAsync(queryEmbeddings[0], TopK, ct);
 
-        // 3. Stitch the retrieved chunks into a CONTEXT block. PR #7 hardens
-        //    this prompt with the strict refusal/no-modern-medical-advice
-        //    rules; PR #8 adds retrieval-threshold refusal upstream.
+        // 3. Stitch the retrieved chunks into a CONTEXT block and prepend
+        //    the hardened grounding rules (PR #7). PR #8 adds retrieval-
+        //    threshold refusal upstream of this; PR #9 input filter; PR #10
+        //    output judge.
         var context = string.Join("\n\n",
             results.Select(r => $"[Section {r.Chunk.Index}]\n{r.Chunk.Text}"));
 
-        var systemPrompt = $$"""
-            Answer the user's question using ONLY the CONTEXT below from
-            Notes on Nursing by Florence Nightingale. If the answer isn't
-            in the context, say so plainly.
-
-            CONTEXT:
-            {{context}}
-            """;
+        var systemPrompt = GroundedSystemPrompt.Build(context);
 
         // 4. Call the LLM with the augmented prompt.
         var response = await llm.CompleteAsync(new LlmRequest(
