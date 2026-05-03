@@ -67,6 +67,8 @@ user message
 - [x] PR #4a: char-based sliding-window Chunker
 - [x] PR #4b: IEmbeddingProvider + VoyageEmbeddingProvider (not yet wired into DI)
 - [x] PR #4c: IVectorStore + InMemoryVectorStore + cosine + JSON persistence (in `Services.Rag` namespace)
+- [x] PR #4d-i: RagBootstrapper class + tests (not yet wired into DI)
+- [x] PR #4d-ii: book corpus + RAG-augmented LlmChatService + Program.cs wiring + smoke test
 
 ## What's next
 
@@ -134,3 +136,17 @@ Add an entry per PR, like a tiny ADR. Format:
   which only the in-memory impl has. A future cloud store (OpenSearch,
   Bedrock KB) would be persistent by definition and require a different
   bootstrapping path — at which point we'd factor a separate strategy.
+- **2026-05-03 — `InMemoryVectorStore` registered twice.** Once as itself
+  (`AddSingleton<InMemoryVectorStore>`), once as the interface mapped to
+  the same instance (`AddSingleton<IVectorStore>(sp => sp.GetRequiredService<InMemoryVectorStore>())`).
+  RagBootstrapper resolves the concrete (needs persistence); LlmChatService
+  resolves the interface (only needs retrieval). Both see the same store.
+- **2026-05-03 — RAG bootstrap runs at app startup, before serving requests.**
+  Considered: `IHostedService` for background indexing. Picked startup-blocking
+  because we don't want to serve a chat request that would call into an
+  empty store. Once persisted, subsequent boots load JSON in milliseconds.
+- **2026-05-03 — Book corpus committed at `src/AskNightingale/data/notes-on-nursing.txt`.**
+  Inside the project rather than at repo root because `dotnet run --project src/AskNightingale`
+  sets cwd to the project folder; relative paths resolve cleanly without
+  config gymnastics. Public domain text so committing is fine; the
+  generated `embeddings.json` is gitignored.

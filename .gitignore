@@ -28,10 +28,10 @@ publish/
 *.pem
 *.key
 
-# Generated runtime data
-data/embeddings.json
-data/embeddings.sqlite
-data/*.bin
+# Generated runtime data (auto-built on first run; do not commit)
+**/data/embeddings.json
+**/data/embeddings.sqlite
+**/data/*.bin
 
 # OS
 .DS_Store
