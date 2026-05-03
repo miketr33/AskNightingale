@@ -18,7 +18,7 @@ public class RetrievalGuard
 
     public RetrievalGuard(IConfiguration config)
     {
-        MinScore = float.TryParse(config["RAG_MIN_SCORE"], out var v) ? v : 0.3f;
+        MinScore = float.TryParse(config["RAG_MIN_SCORE"], out var v) ? v : 0.45f;
     }
 
     public bool ShouldRefuse(IReadOnlyList<RetrievalResult> results)

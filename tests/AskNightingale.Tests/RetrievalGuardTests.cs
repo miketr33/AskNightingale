@@ -9,9 +9,9 @@ namespace AskNightingale.Tests;
 public class RetrievalGuardTests
 {
     [Fact]
-    public void Default_threshold_is_0_3_when_config_unset()
+    public void Default_threshold_is_0_45_when_config_unset()
     {
-        MakeSut().MinScore.ShouldBe(0.3f);
+        MakeSut().MinScore.ShouldBe(0.45f);
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public class RetrievalGuardTests
     [Fact]
     public void All_scores_below_threshold_should_refuse()
     {
-        var sut = MakeSut(threshold: 0.3f);
+        var sut = MakeSut(threshold: 0.45f);
 
         sut.ShouldRefuse([
             new RetrievalResult(MakeChunk(), 0.1f),
@@ -40,18 +40,18 @@ public class RetrievalGuardTests
     [Fact]
     public void Score_at_threshold_should_allow()
     {
-        var sut = MakeSut(threshold: 0.3f);
+        var sut = MakeSut(threshold: 0.45f);
 
         sut.ShouldRefuse([
             new RetrievalResult(MakeChunk(), 0.1f),
-            new RetrievalResult(MakeChunk(), 0.3f)
+            new RetrievalResult(MakeChunk(), 0.45f)
         ]).ShouldBeFalse();
     }
 
     [Fact]
     public void Score_above_threshold_should_allow()
     {
-        var sut = MakeSut(threshold: 0.3f);
+        var sut = MakeSut(threshold: 0.45f);
 
         sut.ShouldRefuse([
             new RetrievalResult(MakeChunk(), 0.5f)
