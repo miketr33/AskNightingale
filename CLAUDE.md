@@ -204,14 +204,21 @@ Add an entry per PR, like a tiny ADR. Format:
   pointing at the eval case(s) it's defending against — so the
   guardrail story is **demonstrably grounded in the failure modes I
   probed**, not handwaved.
-- **2026-05-03 — Prompt-based quote control has a ceiling, demonstrated
-  in manual testing.** Asked the bot about ventilation and it produced
-  an all-caps "quote" that combined two separate passages with reworded
-  phrasing — classic hallucinated quotation. Hardened Rule 3 to
-  explicitly forbid combining passages, changing capitalisation, or
-  adding emphasis. The deterministic fix lives in PR #10's output
-  judge, which mechanically verifies each quoted span appears verbatim
-  in CONTEXT. Honest interview narrative: "I tested the prompt
-  manually, found a residual failure mode, hardened the prompt slightly
-  AND scoped a deterministic post-hoc check for PR #10. Prompts can
-  ask; only verification can guarantee."
+- **2026-05-03 — False alarm on quote fabrication; lesson worth keeping.**
+  Manual testing showed the bot rendering an all-caps "quote" about
+  ventilation. Initial diagnosis: hallucinated quotation (combined
+  passages, added emphasis). Hardened Rule 3 to explicitly forbid
+  combining passages, changing capitalisation, or adding emphasis.
+  Re-tested — same output. About to attribute to prompt ceiling…
+  until a careful grep showed the all-caps quote IS in the source
+  byte-for-byte: it's Nightingale's own first-canon-of-nursing
+  emphasis, just wrapped across two lines so single-line `Select-String`
+  searches missed it. Diagnosis was wrong; model was faithful all along.
+  **Three lessons kept:** (1) verifying LLM output by hand is harder than
+  it looks — line-bounded substring matching misses multi-line spans;
+  (2) the hardened Rule 3 stays — still good defence-in-depth for real
+  combination/cap-change cases, just wasn't load-bearing here;
+  (3) PR #10's output judge needs **normalised, whitespace/newline-
+  insensitive** matching to be useful — naive substring would have made
+  the same mistake I did and incorrectly flagged a faithful quote as
+  fabrication.
