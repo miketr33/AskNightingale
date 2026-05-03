@@ -1,10 +1,14 @@
 using AskNightingale.Components;
+using AskNightingale.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// PR #3 swaps EchoChatService for an LLM-backed implementation.
+builder.Services.AddScoped<IChatService, EchoChatService>();
 
 var app = builder.Build();
 
