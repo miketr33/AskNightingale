@@ -1,0 +1,74 @@
+@page "/chat"
+@rendermode InteractiveServer
+@using AskNightingale.Services
+@inject IChatService ChatService
+
+<PageTitle>Chat — AskNightingale</PageTitle>
+
+<h1>AskNightingale</h1>
+
+<p class="text-muted">Ask questions about <em>Notes on Nursing</em> by Florence Nightingale (1859).</p>
+
+<div class="chat-window" data-testid="chat-window">
+    @foreach (var msg in _messages)
+    {
+        <div class="chat-message chat-message-@msg.Role.ToString().ToLower()" data-testid="chat-message">
+            <strong>@msg.Role</strong>
+            <p>@msg.Content</p>
+        </div>
+    }
+</div>
+
+<div class="chat-input">
+    <textarea @bind="_input"
+              @bind:event="oninput"
+              @onkeydown="HandleKeydownAsync"
+              placeholder="Ask a question..."
+              data-testid="chat-input"
+              rows="2"
+              disabled="@_isSending"></textarea>
+    <button class="btn btn-primary"
+            @onclick="SendAsync"
+            disabled="@(_isSending || string.IsNullOrWhiteSpace(_input))"
+            data-testid="chat-send">
+        @(_isSending ? "Thinking..." : "Send")
+    </button>
+</div>
+
+@code {
+    private enum Role { User, Assistant }
+
+    private record Message(Role Role, string Content);
+
+    private readonly List<Message> _messages = new();
+    private string _input = string.Empty;
+    private bool _isSending;
+
+    private async Task SendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_input) || _isSending) return;
+
+        var userText = _input.Trim();
+        _messages.Add(new Message(Role.User, userText));
+        _input = string.Empty;
+        _isSending = true;
+
+        try
+        {
+            var reply = await ChatService.RespondAsync(userText);
+            _messages.Add(new Message(Role.Assistant, reply));
+        }
+        finally
+        {
+            _isSending = false;
+        }
+    }
+
+    private async Task HandleKeydownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendAsync();
+        }
+    }
+}
