@@ -70,6 +70,7 @@ user message
 - [x] PR #4d-i: RagBootstrapper class + tests (not yet wired into DI)
 - [x] PR #4d-ii: book corpus + RAG-augmented LlmChatService + Program.cs wiring + smoke test
 - [x] PR #5: citations surfaced in chat UI; `IChatService` returns `ChatResponse` (Content + Citations)
+- [x] PR #6: eval set + heuristic runner + pre-guardrails baseline captured
 
 ## What's next
 
@@ -164,3 +165,26 @@ Add an entry per PR, like a tiny ADR. Format:
 - **2026-05-03 — Deleted `EchoChatService`.** It was never registered after
   PR #3; carrying dead code to "support offline dev" doesn't pay rent.
   If we want offline dev later, `IChatService` is easy enough to fake.
+- **2026-05-03 — Eval runner gated behind `RUN_EVAL=1` env var, not always-on.**
+  Considered: always run, skip silently without keys. Picked explicit gate
+  because the eval hits the live API and costs ~£0.02 per run; we don't
+  want it triggered by accident on every `dotnet test`. Output filename is
+  also env-controlled (`EVAL_OUTPUT_FILE`, default `results-pre-guardrails.md`)
+  so PR #11 can flip to the post-guardrails filename without code change.
+- **2026-05-03 — Heuristic scoring (text-contains) for the eval rubric, not
+  LLM-as-judge.** Considered: judge model, embedding similarity. Picked
+  heuristic for the baseline because it's cheap, deterministic, and good
+  enough to surface the obvious failure modes (no refusal, follows
+  injection). PR #10 introduces LLM-as-judge as a *guardrail layer* in
+  the production pipeline; we could later upgrade the eval rubric itself
+  if heuristics turn out too brittle.
+- **2026-05-03 — Heuristic rubric IS too brittle, in practice.** Initial
+  baseline showed 25/27 pass on the harder eval set. Both "failures"
+  turned out to be rubric false negatives: the model refused correctly
+  but used phrasing the rubric didn't anticipate (e.g. "Summarize" not
+  "summary"; the word "joke" appearing in *narration* of a refused
+  injection rather than as actual joke content). Tightened the rubric
+  and accepted the lesson. Honest interview story: "frontier model
+  alignment + minimal grounding prompt is genuinely strong; my eval
+  baseline taught me heuristic rubrics produce false negatives, which
+  PR #10's LLM-as-judge would mitigate at the production layer."
