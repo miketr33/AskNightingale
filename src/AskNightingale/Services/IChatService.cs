@@ -2,5 +2,5 @@ namespace AskNightingale.Services;
 
 public interface IChatService
 {
-    Task<string> RespondAsync(string userMessage, CancellationToken ct = default);
+    Task<ChatResponse> RespondAsync(string userMessage, CancellationToken ct = default);
 }

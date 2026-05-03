@@ -10,8 +10,9 @@ public class LlmChatService(
     IVectorStore store) : IChatService
 {
     private const int TopK = 4;
+    private const int CitationSnippetMaxChars = 150;
 
-    public async Task<string> RespondAsync(string userMessage, CancellationToken ct = default)
+    public async Task<ChatResponse> RespondAsync(string userMessage, CancellationToken ct = default)
     {
         // 1. Embed the user's question (Query mode improves retrieval quality on Voyage).
         var queryEmbeddings = await embedder.EmbedAsync(
@@ -41,6 +42,22 @@ public class LlmChatService(
             Messages: [new LlmMessage("user", userMessage)]
         ), ct);
 
-        return response.Content;
+        // 5. Return answer + citations so the UI can surface the sources.
+        //    The user can verify any quoted span themselves — exposing
+        //    hallucinated quotation, the failure mode PR #7 + #10 also tackle.
+        var citations = results
+            .Select(r => new Citation(
+                r.Chunk.Index,
+                Truncate(r.Chunk.Text, CitationSnippetMaxChars),
+                r.Score))
+            .ToArray();
+
+        return new ChatResponse(response.Content, citations);
+    }
+
+    private static string Truncate(string text, int maxChars)
+    {
+        if (text.Length <= maxChars) return text;
+        return text[..maxChars].TrimEnd() + "…";
     }
 }

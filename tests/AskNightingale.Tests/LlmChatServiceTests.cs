@@ -94,7 +94,7 @@ public class LlmChatServiceTests
 
         var result = await sut.RespondAsync("anything");
 
-        result.ShouldBe("Florence says ventilation matters");
+        result.Content.ShouldBe("Florence says ventilation matters");
     }
 
     [Fact]
@@ -114,6 +114,59 @@ public class LlmChatServiceTests
             .MustHaveHappened();
         A.CallTo(() => llm.CompleteAsync(A<LlmRequest>._, cts.Token))
             .MustHaveHappened();
+    }
+
+    [Fact]
+    public async Task Returns_citations_built_from_retrieval_results()
+    {
+        var (sut, llm, embedder, store) = MakeSut();
+        StubEmbedder(embedder);
+        A.CallTo(() => store.GetTopKAsync(A<float[]>._, A<int>._, A<CancellationToken>._))
+            .Returns(Task.FromResult<IReadOnlyList<RetrievalResult>>([
+                new RetrievalResult(MakeChunk(7, "ventilation requires fresh air"), 0.9f),
+                new RetrievalResult(MakeChunk(12, "noise should be minimised"), 0.7f)
+            ]));
+        StubLlm(llm, "any reply");
+
+        var result = await sut.RespondAsync("anything");
+
+        result.Citations.Count.ShouldBe(2);
+        result.Citations[0].ChunkIndex.ShouldBe(7);
+        result.Citations[0].Score.ShouldBe(0.9f);
+        result.Citations[0].Snippet.ShouldContain("ventilation requires fresh air");
+        result.Citations[1].ChunkIndex.ShouldBe(12);
+        result.Citations[1].Score.ShouldBe(0.7f);
+    }
+
+    [Fact]
+    public async Task Citation_snippet_is_truncated_for_long_chunks()
+    {
+        var longText = new string('x', 500);
+        var (sut, llm, embedder, store) = MakeSut();
+        StubEmbedder(embedder);
+        A.CallTo(() => store.GetTopKAsync(A<float[]>._, A<int>._, A<CancellationToken>._))
+            .Returns(Task.FromResult<IReadOnlyList<RetrievalResult>>([
+                new RetrievalResult(MakeChunk(0, longText), 0.5f)
+            ]));
+        StubLlm(llm, "any reply");
+
+        var result = await sut.RespondAsync("anything");
+
+        result.Citations[0].Snippet.Length.ShouldBeLessThan(longText.Length);
+        result.Citations[0].Snippet.ShouldEndWith("…");
+    }
+
+    [Fact]
+    public async Task Empty_retrieval_returns_empty_citations()
+    {
+        var (sut, llm, embedder, store) = MakeSut();
+        StubEmbedder(embedder);
+        StubStore(store); // returns empty
+        StubLlm(llm, "any reply");
+
+        var result = await sut.RespondAsync("anything");
+
+        result.Citations.ShouldBeEmpty();
     }
 
     private static (LlmChatService sut, ILlmProvider llm, IEmbeddingProvider embedder, IVectorStore store) MakeSut()
