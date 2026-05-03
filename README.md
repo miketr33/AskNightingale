@@ -22,11 +22,16 @@ Day 1 in progress. See `CLAUDE.md` for the running brief and decision log.
 
 ```bash
 cp .env.example .env
-# Add your ANTHROPIC_API_KEY and VOYAGE_API_KEY to .env
+# Add your ANTHROPIC_API_KEY (and VOYAGE_API_KEY when PR #4 lands) to .env
 dotnet run --project src/AskNightingale
 ```
 
-(End-to-end run-instructions land in PR #3 once the LLM is wired in.)
+The `.env` file is loaded automatically at startup via `DotNetEnv` and is
+gitignored. Alternatively, set `ANTHROPIC_API_KEY` in your shell env or
+via `dotnet user-secrets`.
+
+Default model is `claude-haiku-4-5`; override with `ANTHROPIC_MODEL` in
+`.env` to use Sonnet 4.6 for the demo run.
 
 ## Run tests
 

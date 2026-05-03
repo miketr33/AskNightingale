@@ -61,7 +61,9 @@ user message
 
 ## What's done
 
-- [x] PR #1 (in progress): solution scaffold, test project, CI
+- [x] PR #1: solution scaffold, test project, CI
+- [x] PR #2: chat UI + IChatService stub
+- [x] PR #3: ILlmProvider + AnthropicLlmProvider + LlmChatService (no grounding yet)
 
 ## What's next
 
@@ -89,3 +91,17 @@ Add an entry per PR, like a tiny ADR. Format:
   modern-medical-advice guardrail to be explicit.
 - **2026-05-03 — Bedrock region: eu-west-2 (London).** UK latency.
   Fallback eu-west-1 if Claude isn't available there.
+- **2026-05-03 — Raw HttpClient over Anthropic.SDK community NuGet.**
+  Considered: Anthropic.SDK package. Picked HttpClient because
+  explainability matters for the interview — "I can walk you through
+  every line" — and the messages-endpoint surface is tiny (~50 LOC of
+  records + one POST).
+- **2026-05-03 — DotNetEnv for .env loading in dev.** Considered: user
+  secrets only. Picked .env because it matches what the team is likely
+  to use across stack and the .env.example workflow is friction-free.
+  Production builds where no .env exists silently no-op.
+- **2026-05-03 — `LlmRequest` carries an explicit `SystemPrompt`,
+  message list, and optional `MaxTokens`.** Considered: just
+  `(string user) -> string`. Picked the structured shape so PR #4
+  (RAG-augmented prompts) and PR #7 (strict system prompt) are pure
+  composition — no breaking changes to `ILlmProvider`.

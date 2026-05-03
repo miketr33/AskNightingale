@@ -1,14 +1,20 @@
 using AskNightingale.Components;
 using AskNightingale.Services;
+using AskNightingale.Services.Llm;
+using DotNetEnv;
+
+// Walk up from cwd to find .env. Silent no-op in production where no .env exists.
+Env.TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// PR #3 swaps EchoChatService for an LLM-backed implementation.
-builder.Services.AddScoped<IChatService, EchoChatService>();
+// LLM stack. PR #3-stretch (tomorrow) adds BedrockLlmProvider beside this
+// one and swaps the registration via config.
+builder.Services.AddHttpClient<ILlmProvider, AnthropicLlmProvider>();
+builder.Services.AddScoped<IChatService, LlmChatService>();
 
 var app = builder.Build();
 
