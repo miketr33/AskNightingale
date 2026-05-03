@@ -72,6 +72,7 @@ user message
 - [x] PR #5: citations surfaced in chat UI; `IChatService` returns `ChatResponse` (Content + Citations)
 - [x] PR #6: eval set + heuristic runner + pre-guardrails baseline captured
 - [x] PR #7: hardened grounding system prompt extracted to `GroundedSystemPrompt`
+- [x] PR #8: retrieval threshold guardrail (Layer 2) refuses upstream of LLM call
 
 ## What's next
 
@@ -204,6 +205,30 @@ Add an entry per PR, like a tiny ADR. Format:
   pointing at the eval case(s) it's defending against — so the
   guardrail story is **demonstrably grounded in the failure modes I
   probed**, not handwaved.
+- **2026-05-03 — `RetrievalGuard` refuses upstream of the LLM call (PR #8).**
+  Considered: rely on system prompt (PR #7) to refuse off-topic. Picked
+  the retrieval-threshold short-circuit because (a) it saves the LLM
+  call cost on cleanly-off-topic queries, (b) it's deterministic — won't
+  drift with model updates or non-determinism, (c) the prompt-based
+  refusal can still kick in for borderline cases that retrieve
+  semi-relevant chunks. Default threshold 0.3 chosen as a starting
+  point — tunable via `RAG_MIN_SCORE`; on-topic matches in this corpus
+  typically score 0.5+, off-topic 0.0-0.3.
+- **2026-05-03 — Each guardrail is its own class.** `RetrievalGuard`,
+  upcoming `InputGuard` (PR #9), upcoming `OutputJudge` (PR #10).
+  Considered: inline checks in `LlmChatService`. Picked extraction
+  because the architecture diagram for interview maps 1:1 to code: each
+  box is a class with single responsibility and isolated tests. Easier
+  to defend in Q&A — "show me the input filter" → file in the
+  `Guardrails/` folder.
+- **2026-05-03 — Refusal text duplicated in two places, intentionally.**
+  Once in `GroundedSystemPrompt` (Rule 1, what the LLM should say) and
+  once in `LlmChatService` (the const `Refusal` returned when
+  `RetrievalGuard` short-circuits). Both render identical UX; the
+  duplication is a deliberate small DRY violation rather than coupling
+  the two layers via a shared constant. If we change the wording later,
+  it's two places to update — acceptable cost for keeping the prompt
+  layer and the runtime layer independent.
 - **2026-05-03 — False alarm on quote fabrication; lesson worth keeping.**
   Manual testing showed the bot rendering an all-caps "quote" about
   ventilation. Initial diagnosis: hallucinated quotation (combined

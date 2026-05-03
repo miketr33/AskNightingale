@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AskNightingale.Services;
 using AskNightingale.Services.Embeddings;
+using AskNightingale.Services.Guardrails;
 using AskNightingale.Services.Llm;
 using AskNightingale.Services.Rag;
 using DotNetEnv;
@@ -101,8 +102,9 @@ public class EvalRunnerTests
         var store = new InMemoryVectorStore();
         var bootstrapper = new RagBootstrapper(chunker, embedder, store, config);
         await bootstrapper.EnsureLoadedAsync();
+        var retrievalGuard = new RetrievalGuard(config);
 
-        return new LlmChatService(llm, embedder, store);
+        return new LlmChatService(llm, embedder, store, retrievalGuard);
     }
 
     private static IReadOnlyList<EvalCase> LoadCases(string path)

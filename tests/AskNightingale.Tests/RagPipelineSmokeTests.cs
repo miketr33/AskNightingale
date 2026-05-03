@@ -1,5 +1,6 @@
 using AskNightingale.Services;
 using AskNightingale.Services.Embeddings;
+using AskNightingale.Services.Guardrails;
 using AskNightingale.Services.Llm;
 using AskNightingale.Services.Rag;
 using FakeItEasy;
@@ -54,7 +55,8 @@ public class RagPipelineSmokeTests
             var bootstrapper = new RagBootstrapper(chunker, embedder, store, config);
             await bootstrapper.EnsureLoadedAsync();
 
-            var chatService = new LlmChatService(llm, embedder, store);
+            var guard = new RetrievalGuard(config);
+            var chatService = new LlmChatService(llm, embedder, store, guard);
             var result = await chatService.RespondAsync("tell me about ventilation");
 
             result.Content.ShouldBe("answer using context");

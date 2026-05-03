@@ -1,8 +1,11 @@
+using System.Globalization;
 using AskNightingale.Services;
 using AskNightingale.Services.Embeddings;
+using AskNightingale.Services.Guardrails;
 using AskNightingale.Services.Llm;
 using AskNightingale.Services.Rag;
 using FakeItEasy;
+using Microsoft.Extensions.Configuration;
 using Shouldly;
 
 namespace AskNightingale.Tests;
@@ -178,26 +181,78 @@ public class LlmChatServiceTests
     }
 
     [Fact]
-    public async Task Empty_retrieval_returns_empty_citations()
+    public async Task Refuses_without_calling_llm_when_retrieval_is_empty()
     {
-        var (sut, llm, embedder, store) = MakeSut();
+        var (sut, llm, embedder, store) = MakeSut(minScore: 0.3f);
         StubEmbedder(embedder);
-        StubStore(store); // returns empty
-        StubLlm(llm, "any reply");
+        A.CallTo(() => store.GetTopKAsync(A<float[]>._, A<int>._, A<CancellationToken>._))
+            .Returns(Task.FromResult<IReadOnlyList<RetrievalResult>>([]));
+        StubLlm(llm, "should not be called");
 
         var result = await sut.RespondAsync("anything");
 
+        result.Content.ShouldContain("only answer");
         result.Citations.ShouldBeEmpty();
+        A.CallTo(() => llm.CompleteAsync(A<LlmRequest>._, A<CancellationToken>._))
+            .MustNotHaveHappened();
     }
 
-    private static (LlmChatService sut, ILlmProvider llm, IEmbeddingProvider embedder, IVectorStore store) MakeSut()
+    [Fact]
+    public async Task Refuses_without_calling_llm_when_all_scores_below_threshold()
+    {
+        var (sut, llm, embedder, store) = MakeSut(minScore: 0.3f);
+        StubEmbedder(embedder);
+        A.CallTo(() => store.GetTopKAsync(A<float[]>._, A<int>._, A<CancellationToken>._))
+            .Returns(Task.FromResult<IReadOnlyList<RetrievalResult>>([
+                new RetrievalResult(MakeChunk(0, "weak match"), 0.1f),
+                new RetrievalResult(MakeChunk(1, "weaker"), 0.05f)
+            ]));
+        StubLlm(llm, "should not be called");
+
+        var result = await sut.RespondAsync("anything");
+
+        result.Content.ShouldContain("only answer");
+        A.CallTo(() => llm.CompleteAsync(A<LlmRequest>._, A<CancellationToken>._))
+            .MustNotHaveHappened();
+    }
+
+    [Fact]
+    public async Task Calls_llm_when_at_least_one_score_above_threshold()
+    {
+        var (sut, llm, embedder, store) = MakeSut(minScore: 0.3f);
+        StubEmbedder(embedder);
+        A.CallTo(() => store.GetTopKAsync(A<float[]>._, A<int>._, A<CancellationToken>._))
+            .Returns(Task.FromResult<IReadOnlyList<RetrievalResult>>([
+                new RetrievalResult(MakeChunk(0, "low"), 0.1f),
+                new RetrievalResult(MakeChunk(1, "high enough"), 0.5f)
+            ]));
+        StubLlm(llm, "real answer");
+
+        var result = await sut.RespondAsync("anything");
+
+        result.Content.ShouldBe("real answer");
+        A.CallTo(() => llm.CompleteAsync(A<LlmRequest>._, A<CancellationToken>._))
+            .MustHaveHappened();
+    }
+
+    private static (LlmChatService sut, ILlmProvider llm, IEmbeddingProvider embedder, IVectorStore store)
+        MakeSut(float minScore = 0f)
     {
         var llm = A.Fake<ILlmProvider>();
         var embedder = A.Fake<IEmbeddingProvider>();
         var store = A.Fake<IVectorStore>();
-        return (new LlmChatService(llm, embedder, store), llm, embedder, store);
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["RAG_MIN_SCORE"] = minScore.ToString(CultureInfo.InvariantCulture)
+            }).Build();
+        var guard = new RetrievalGuard(config);
+        return (new LlmChatService(llm, embedder, store, guard), llm, embedder, store);
     }
 
+    // Default stub returns one high-scoring chunk so MakeSut's default
+    // minScore=0 lets the LLM be called. Tests that need refusal explicitly
+    // override the store stub.
     private static void StubEmbedder(IEmbeddingProvider embedder) =>
         A.CallTo(() => embedder.EmbedAsync(
                 A<IReadOnlyList<string>>._, A<EmbeddingPurpose>._, A<CancellationToken>._))
@@ -205,7 +260,8 @@ public class LlmChatServiceTests
 
     private static void StubStore(IVectorStore store) =>
         A.CallTo(() => store.GetTopKAsync(A<float[]>._, A<int>._, A<CancellationToken>._))
-            .Returns(Task.FromResult<IReadOnlyList<RetrievalResult>>([]));
+            .Returns(Task.FromResult<IReadOnlyList<RetrievalResult>>(
+                [new RetrievalResult(new Chunk(0, "default chunk", 0), 1.0f)]));
 
     private static void StubLlm(ILlmProvider llm, string reply) =>
         A.CallTo(() => llm.CompleteAsync(A<LlmRequest>._, A<CancellationToken>._))
