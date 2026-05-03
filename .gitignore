@@ -1,0 +1,48 @@
+# .NET build output
+bin/
+obj/
+out/
+publish/
+
+# IDEs
+.vs/
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+
+# Rider / JetBrains
+*.iml
+
+# Logs and temp
+*.log
+*.tmp
+*.cache
+
+# Secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Generated runtime data
+data/embeddings.json
+data/embeddings.sqlite
+data/*.bin
+
+# OS
+.DS_Store
+Thumbs.db
+
+# NuGet
+*.nupkg
+.nuget/
+
+# Test results
+TestResults/
+coverage*.json
+coverage*.xml
+*.trx

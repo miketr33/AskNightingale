@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AskNightingale/AskNightingale.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AskNightingale.Tests/AskNightingale.Tests.csproj" />
+  </Folder>
+</Solution>
