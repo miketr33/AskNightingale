@@ -113,3 +113,14 @@ Add an entry per PR, like a tiny ADR. Format:
   retrieval quality (separate spaces for indexed corpus vs user
   queries). Bedrock Titan ignores the parameter, so the same
   interface still works for both providers when we swap tomorrow.
+- **2026-05-03 — JSON persistence on `InMemoryVectorStore`, NOT on
+  `IVectorStore`.** Considered: `Save/LoadAsync` on the interface.
+  Picked impl-only because a future cloud store (e.g.
+  OpenSearch/pgvector) is persistent by definition and has no "load
+  from JSON" concept. Keeping the interface honest about the minimum
+  contract every store must support.
+- **2026-05-03 — Plain `List<VectorStoreEntry>` with no locking.**
+  Considered: `ReaderWriterLockSlim`, `ImmutableList`. Picked plain
+  list because writes happen once at boot (RagBootstrapper, PR #4d)
+  and reads run per chat request — they never overlap. Documented in
+  the source so the constraint is explicit.
