@@ -1,6 +1,7 @@
 using AskNightingale.Components;
 using AskNightingale.Services;
 using AskNightingale.Services.Embeddings;
+using AskNightingale.Services.Guardrails;
 using AskNightingale.Services.Llm;
 using AskNightingale.Services.Rag;
 using DotNetEnv;
@@ -27,7 +28,12 @@ builder.Services.AddSingleton<InMemoryVectorStore>();
 builder.Services.AddSingleton<IVectorStore>(sp => sp.GetRequiredService<InMemoryVectorStore>());
 builder.Services.AddTransient<RagBootstrapper>();
 
-// Chat service: now retrieval-augmented (PR #4d-ii).
+// Guardrails. Each layer is its own class so the architecture maps 1:1
+// to code: PR #8 retrieval threshold, PR #9 input filter, PR #10 output judge.
+builder.Services.AddSingleton<RetrievalGuard>();
+
+// Chat service: retrieval-augmented (PR #4d-ii) with retrieval-threshold
+// short-circuit (PR #8).
 builder.Services.AddScoped<IChatService, LlmChatService>();
 
 var app = builder.Build();
