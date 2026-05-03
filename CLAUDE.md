@@ -64,6 +64,8 @@ user message
 - [x] PR #1: solution scaffold, test project, CI
 - [x] PR #2: chat UI + IChatService stub
 - [x] PR #3: ILlmProvider + AnthropicLlmProvider + LlmChatService (no grounding yet)
+- [x] PR #4a: char-based sliding-window Chunker
+- [x] PR #4b: IEmbeddingProvider + VoyageEmbeddingProvider (not yet wired into DI)
 
 ## What's next
 
@@ -105,3 +107,9 @@ Add an entry per PR, like a tiny ADR. Format:
   `(string user) -> string`. Picked the structured shape so PR #4
   (RAG-augmented prompts) and PR #7 (strict system prompt) are pure
   composition — no breaking changes to `ILlmProvider`.
+- **2026-05-03 — `EmbeddingPurpose` enum on `IEmbeddingProvider`.**
+  Considered: plain `EmbedAsync(texts)` with no purpose. Picked the
+  enum because Voyage's `input_type` parameter materially affects
+  retrieval quality (separate spaces for indexed corpus vs user
+  queries). Bedrock Titan ignores the parameter, so the same
+  interface still works for both providers when we swap tomorrow.
