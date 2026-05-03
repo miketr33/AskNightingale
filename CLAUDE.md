@@ -73,6 +73,7 @@ user message
 - [x] PR #6: eval set + heuristic runner + pre-guardrails baseline captured
 - [x] PR #7: hardened grounding system prompt extracted to `GroundedSystemPrompt`
 - [x] PR #8: retrieval threshold guardrail (Layer 2) refuses upstream of LLM call
+- [x] PR #8b: adjusted threshold after debugging evals cosine similarity score. 
 
 ## What's next
 
@@ -247,3 +248,5 @@ Add an entry per PR, like a tiny ADR. Format:
   insensitive** matching to be useful — naive substring would have made
   the same mistake I did and incorrectly flagged a faithful quote as
   fabrication.
+  **2026-05-03 - Adjusted RetreivalGaurd threshold to 0.45** after debugging
+  cosine similarity scores.

@@ -25,6 +25,10 @@ public class LlmChatService(
         // 2. Find the closest k chunks of the corpus.
         var results = await store.GetTopKAsync(queryEmbeddings[0], TopK, ct);
 
+        // Debug: Uncomment this line for tuning retrieval guard threshold. Outputs cosine score to terminal
+        // Console.WriteLine($"[retrieval] {results.Count} chunks, scores=[{string.Join(", ", results.Select(r => r.Score.ToString("F2")))}]");
+        
+        
         // 3. PR #8 — Layer 2 guardrail: refuse before paying for the LLM
         //    when nothing in the corpus is close enough to ground an answer.
         //    Deterministic, cheap, fast. Complements the prompt-based
