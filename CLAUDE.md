@@ -66,6 +66,7 @@ user message
 - [x] PR #3: ILlmProvider + AnthropicLlmProvider + LlmChatService (no grounding yet)
 - [x] PR #4a: char-based sliding-window Chunker
 - [x] PR #4b: IEmbeddingProvider + VoyageEmbeddingProvider (not yet wired into DI)
+- [x] PR #4c: IVectorStore + InMemoryVectorStore + cosine + JSON persistence (in `Services.Rag` namespace)
 
 ## What's next
 
@@ -124,3 +125,12 @@ Add an entry per PR, like a tiny ADR. Format:
   list because writes happen once at boot (RagBootstrapper, PR #4d)
   and reads run per chat request — they never overlap. Documented in
   the source so the constraint is explicit.
+- **2026-05-03 — `IVectorStore` + `InMemoryVectorStore` live in
+  `Services.Rag`, not a top-level `Stores/`.** Keeps all RAG-related
+  code (chunker, vector store, bootstrapper) co-located in one folder
+  for easier navigation and review.
+- **2026-05-03 — `RagBootstrapper` takes concrete `InMemoryVectorStore`,
+  not `IVectorStore`.** It needs `Save/LoadFromAsync` for persistence,
+  which only the in-memory impl has. A future cloud store (OpenSearch,
+  Bedrock KB) would be persistent by definition and require a different
+  bootstrapping path — at which point we'd factor a separate strategy.
