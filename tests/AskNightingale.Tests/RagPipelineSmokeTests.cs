@@ -57,7 +57,8 @@ public class RagPipelineSmokeTests
             var chatService = new LlmChatService(llm, embedder, store);
             var result = await chatService.RespondAsync("tell me about ventilation");
 
-            result.ShouldBe("answer using context");
+            result.Content.ShouldBe("answer using context");
+            result.Citations.Count.ShouldBeGreaterThan(0);
             store.Count.ShouldBeGreaterThan(0);
 
             // The system prompt sent to the LLM should include corpus content.

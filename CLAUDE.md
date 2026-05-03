@@ -69,6 +69,7 @@ user message
 - [x] PR #4c: IVectorStore + InMemoryVectorStore + cosine + JSON persistence (in `Services.Rag` namespace)
 - [x] PR #4d-i: RagBootstrapper class + tests (not yet wired into DI)
 - [x] PR #4d-ii: book corpus + RAG-augmented LlmChatService + Program.cs wiring + smoke test
+- [x] PR #5: citations surfaced in chat UI; `IChatService` returns `ChatResponse` (Content + Citations)
 
 ## What's next
 
@@ -150,3 +151,16 @@ Add an entry per PR, like a tiny ADR. Format:
   sets cwd to the project folder; relative paths resolve cleanly without
   config gymnastics. Public domain text so committing is fine; the
   generated `embeddings.json` is gitignored.
+- **2026-05-03 — `IChatService` returns `ChatResponse` (Content + Citations),
+  not a plain string.** Considered: a separate `IRetriever` query API for the
+  UI to fetch sources independently. Picked the bundled return because the
+  chat service already has the retrieval results in hand — no need for the
+  UI to re-query. Empty `Citations` list when there's nothing retrieved
+  keeps the type non-nullable and lets the UI render conditionally.
+- **2026-05-03 — Citation snippets truncated to 150 chars in `LlmChatService`.**
+  Long enough to verify the topic, short enough to not clutter the UI. The
+  full chunk text is still in the store if we ever want a "expand to full
+  source" UI affordance.
+- **2026-05-03 — Deleted `EchoChatService`.** It was never registered after
+  PR #3; carrying dead code to "support offline dev" doesn't pay rent.
+  If we want offline dev later, `IChatService` is easy enough to fake.
