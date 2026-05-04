@@ -248,5 +248,19 @@ Add an entry per PR, like a tiny ADR. Format:
   insensitive** matching to be useful — naive substring would have made
   the same mistake I did and incorrectly flagged a faithful quote as
   fabrication.
-  **2026-05-03 - Adjusted RetreivalGaurd threshold to 0.45** after debugging
-  cosine similarity scores.
+- **2026-05-04 — Tuned threshold from 0.3 → 0.45 after measuring cosine similarity
+  score distribution.** Instrumented retrieval scores across the 27 eval cases.
+  Found a clean clustering:
+  - On-topic queries: **0.52-0.64** (lowest: management at 0.52)
+  - Clearly off-topic: **0.17-0.32** (math, weather, base64)
+  - Adversarial-with-corpus-vocabulary: **0.37-0.50** (translate 0.46,
+    hypothetical 0.50, rp-continuation 0.47 — they share nursing terms
+    so they retrieve real chunks)
+    A 0.02-wide clean gap separates worst adversarial (0.50) from on-topic
+    floor (0.52). Bumped threshold to 0.45 — keeps 0.07 margin from
+    on-topic floor for phrasing variation; refuses 6+ extra adversarial
+    cases upstream of the LLM call. Higher (0.5+) risks false refusals;
+    the remaining adversarial >0.45 must be caught by PR #9 (input
+    filter) or PR #10 (output judge). **Honest takeaway: cosine measures
+    topical relatedness, not intent — a jailbreak phrased nursing-adjacent
+    retrieves the same chunks as a legitimate question.**
