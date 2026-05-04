@@ -10,7 +10,8 @@ public class LlmChatService(
     ILlmProvider llm,
     IEmbeddingProvider embedder,
     IVectorStore store,
-    RetrievalGuard retrievalGuard) : IChatService
+    RetrievalGuard retrievalGuard,
+    InputGuard inputGuard) : IChatService
 {
     private const int TopK = 4;
     private const int CitationSnippetMaxChars = 150;
@@ -18,6 +19,12 @@ public class LlmChatService(
 
     public async Task<ChatResponse> RespondAsync(string userMessage, CancellationToken ct = default)
     {
+        // Cheap refusal - no LLM involved here
+        if (inputGuard.ShouldRefuse(userMessage))
+        {
+            return new ChatResponse(Refusal, []);
+        }
+        
         // 1. Embed the user's question (Query mode improves retrieval quality on Voyage).
         var queryEmbeddings = await embedder.EmbedAsync(
             [userMessage], EmbeddingPurpose.Query, ct);

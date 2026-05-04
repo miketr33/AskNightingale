@@ -55,8 +55,9 @@ public class RagPipelineSmokeTests
             var bootstrapper = new RagBootstrapper(chunker, embedder, store, config);
             await bootstrapper.EnsureLoadedAsync();
 
-            var guard = new RetrievalGuard(config);
-            var chatService = new LlmChatService(llm, embedder, store, guard);
+            var retrievalGuard = new RetrievalGuard(config);
+            var inputGuard = new InputGuard();
+            var chatService = new LlmChatService(llm, embedder, store, retrievalGuard, inputGuard);
             var result = await chatService.RespondAsync("tell me about ventilation");
 
             result.Content.ShouldBe("answer using context");

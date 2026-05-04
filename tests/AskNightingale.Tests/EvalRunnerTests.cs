@@ -103,8 +103,9 @@ public class EvalRunnerTests
         var bootstrapper = new RagBootstrapper(chunker, embedder, store, config);
         await bootstrapper.EnsureLoadedAsync();
         var retrievalGuard = new RetrievalGuard(config);
+        var inputGuard = new InputGuard();
 
-        return new LlmChatService(llm, embedder, store, retrievalGuard);
+        return new LlmChatService(llm, embedder, store, retrievalGuard, inputGuard);
     }
 
     private static IReadOnlyList<EvalCase> LoadCases(string path)
