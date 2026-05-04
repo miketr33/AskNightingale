@@ -40,8 +40,16 @@ public class RagPipelineSmokeTests
                 });
 
             var llm = A.Fake<ILlmProvider>();
-            A.CallTo(() => llm.CompleteAsync(A<LlmRequest>._, A<CancellationToken>._))
+            // Chat call (SystemPrompt populated): returns the candidate answer.
+            A.CallTo(() => llm.CompleteAsync(
+                    A<LlmRequest>.That.Matches(r => r.SystemPrompt != null),
+                    A<CancellationToken>._))
                 .Returns(new LlmResponse("answer using context", "model", 0, 0));
+            // Judge call (SystemPrompt = null): always APPROVE for the smoke test.
+            A.CallTo(() => llm.CompleteAsync(
+                    A<LlmRequest>.That.Matches(r => r.SystemPrompt == null),
+                    A<CancellationToken>._))
+                .Returns(new LlmResponse("APPROVE", "model", 0, 0));
 
             var store = new InMemoryVectorStore();
             var chunker = new Chunker();
@@ -57,7 +65,8 @@ public class RagPipelineSmokeTests
 
             var retrievalGuard = new RetrievalGuard(config);
             var inputGuard = new InputGuard();
-            var chatService = new LlmChatService(llm, embedder, store, retrievalGuard, inputGuard);
+            var outputJudge = new OutputJudge(llm);
+            var chatService = new LlmChatService(llm, embedder, store, retrievalGuard, inputGuard, outputJudge);
             var result = await chatService.RespondAsync("tell me about ventilation");
 
             result.Content.ShouldBe("answer using context");
