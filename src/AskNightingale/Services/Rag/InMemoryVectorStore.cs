@@ -2,23 +2,17 @@ using System.Text.Json;
 
 namespace AskNightingale.Services.Rag;
 
-/// <summary>
-/// Persisted shape on disk. Public so System.Text.Json can serialise it
-/// via reflection without setup ceremony.
-/// </summary>
+/// <summary>Persisted shape on disk. Public so System.Text.Json can serialise it via reflection.</summary>
 public record VectorStoreEntry(Chunk Chunk, float[] Embedding);
 
-
 /// <summary>
-/// Single-book RAG store. ~150 chunks × ~1024 floats fits trivially in
-/// memory; cosine over the lot per query is ~150k float ops, well under
-/// a millisecond. JSON persistence skips re-embedding on app restart.
+/// Single-book RAG store. ~150 chunks × ~1024 floats fits trivially in memory;
+/// cosine over the lot per query is well under a millisecond. JSON persistence
+/// skips re-embedding on app restart.
 ///
-/// <br/><br/>Thread safety: writes happen once at boot via RagBootstrapper (PR #4d),
-/// reads happen per chat request. We accept the no-lock implementation
-/// because writes never overlap with reads in practice.
-/// <br/><br/>If we were to productionise, we may consider OpenSearch or AWS Bedrock KB
-/// to store the vectors we need to be able to query to find similar vectors in a data base.
+/// <br/><br/>Thread safety: writes happen once at boot; reads happen per chat
+/// request. They never overlap, so no locking. To productionise, swap for
+/// OpenSearch or Bedrock KB behind the same <see cref="IVectorStore"/> interface.
 /// </summary>
 public class InMemoryVectorStore : IVectorStore
 {

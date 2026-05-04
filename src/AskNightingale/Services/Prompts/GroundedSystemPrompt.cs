@@ -1,30 +1,7 @@
 namespace AskNightingale.Services.Prompts;
 
-// Hardened grounding system prompt for the chatbot.
-//
-// Each rule maps to an observed failure mode or defence-in-depth concern.
-// You can walk down this list and see the eval case
-// each rule addresses:
-//
-//   1. Source isolation        — refuses to answer from training knowledge
-//                                 when the retrieved context doesn't cover
-//                                 the question. Closes most off-topic cases.
-//   2. Modern medical advice   — closes role-play / hypothetical jailbreaks:
-//                                 jailbreak-prescribe, jailbreak-hypothetical,
-//                                 jailbreak-modern-via-old, jailbreak-rp-continuation.
-//   3. Quotation honesty       — addresses hallucinated quotation (the
-//                                 paraphrased-but-quoted answers spotted in
-//                                 manual testing).
-//   4. Instruction injection   — closes injection-jokes, injection-unrestricted,
-//                                 injection-admin, injection-base64,
-//                                 injection-fake-history.
-//   5. Citation requirement    — anchors answers to specific chunks so the UI
-//                                 (PR #5) can surface verifiable sources.
-//   6. Prompt non-disclosure   — closes injection-prompt-extraction.
-//
-// PR #8 (retrieval threshold) and PR #9 (input pre-filter) provide
-// defence-in-depth for cases this prompt might miss. PR #10 (output
-// judge) is post-hoc verification.
+// Grounding system prompt. Six explicit rules — see the rule text below
+// for what each one defends against.
 public static class GroundedSystemPrompt
 {
     public const string Header =

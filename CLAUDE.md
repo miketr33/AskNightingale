@@ -76,12 +76,13 @@ user message
 - [x] PR #8b: adjusted threshold after debugging evals cosine similarity score.
 - [x] PR #9: input pre-filter guardrail (Layer 3) — regex categories refuse before embedding/LLM
 - [x] PR #10: output judge guardrail (Layer 4) — LLM-as-judge verifies answer is grounded, on-topic, no fabricated quotes
+- [x] PR #11: README polish (architecture diagram, eval comparison, decision summary, project structure); `results-post-guardrails.md` committed; AnthropicLlmProvider serialisation bug fix + wire-format regression tests
 
-## What's next
+## Eval results
 
-See the plan file at
-`C:\Users\mikej\.claude\plans\ok-i-want-you-ethereal-fountain.md` for the
-hour-by-hour timeline and PR list.
+- **Pre-guardrails**: 25/27 (92%) — both fails were rubric false-negatives (model refused correctly, heuristic missed it)
+- **Post-guardrails**: 26/27 (96%) — single fail is a judge false-rejection on `on-topic-noise` (chat answered faithfully; OutputJudge wrongly refused). Documented as the inherent cost of LLM-as-judge.
+- Both reports in `evals/` for diffing.
 
 ## Decisions log (running)
 

@@ -6,7 +6,7 @@ using AskNightingale.Services.Llm;
 using AskNightingale.Services.Rag;
 using DotNetEnv;
 
-// Walk up from cwd to find .env. Silent no-op in production where no .env exists.
+// Load .env from the repo if present; silent no-op in production.
 Env.TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,35 +14,25 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// LLM stack. PR #3-stretch (tomorrow) adds BedrockLlmProvider beside this
-// one and swaps the registration via config.
 builder.Services.AddHttpClient<ILlmProvider, AnthropicLlmProvider>();
-
-// Embedding + RAG stack. The vector store is registered as a Singleton
-// twice so both InMemoryVectorStore (needed by RagBootstrapper for
-// persistence) and IVectorStore (needed by LlmChatService) resolve to
-// the SAME instance.
 builder.Services.AddHttpClient<IEmbeddingProvider, VoyageEmbeddingProvider>();
+
 builder.Services.AddSingleton<Chunker>();
+// Vector store registered twice: bootstrapper resolves the concrete type for
+// persistence; chat service resolves the interface for retrieval. Same instance.
 builder.Services.AddSingleton<InMemoryVectorStore>();
 builder.Services.AddSingleton<IVectorStore>(sp => sp.GetRequiredService<InMemoryVectorStore>());
 builder.Services.AddTransient<RagBootstrapper>();
 
-// Guardrails. Each layer is its own class so the architecture maps 1:1
-// to code: PR #8 retrieval threshold, PR #9 input filter, PR #10 output judge.
 builder.Services.AddSingleton<RetrievalGuard>();
 builder.Services.AddSingleton<InputGuard>();
 builder.Services.AddSingleton<OutputJudge>();
 
-// Chat service: retrieval-augmented (PR #4d-ii) with retrieval-threshold
-// short-circuit (PR #8).
 builder.Services.AddScoped<IChatService, LlmChatService>();
 
 var app = builder.Build();
 
-// Bootstrap the RAG corpus before serving requests. EnsureLoadedAsync is
-// idempotent — on subsequent restarts it loads data/embeddings.json
-// instead of re-embedding the corpus.
+// Bootstrap the RAG corpus before serving requests; idempotent on restart.
 using (var bootstrapScope = app.Services.CreateScope())
 {
     var bootstrapper = bootstrapScope.ServiceProvider.GetRequiredService<RagBootstrapper>();

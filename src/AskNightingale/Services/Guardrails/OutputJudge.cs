@@ -3,16 +3,9 @@
 namespace AskNightingale.Services.Guardrails;
 
 /// <summary>
-/// Layer 4 guardrail: LLM-as-judge. Runs AFTER the main answer is generated
-/// and verifies semantic properties the cheaper layers can't:
-/// <br/>- Answer is supported by retrieved CONTEXT (no fabrication)
-/// <br/>- Answer is relevant to the QUESTION (catches off-topic slip-through)
-/// <br/>- Any quoted span appears verbatim in CONTEXT (closes the
-///     hallucinated-quotation gap PR #7's prompt only asked nicely about)
-///
-/// <br/><br/>Cost: one extra LLM call per chat request — doubles per-message API
-/// spend. For a single-user demo this is fine; for production we'd batch,
-/// use a cheaper model, or skip on cached/short responses.
+/// LLM-as-judge: verifies the candidate answer is supported by CONTEXT,
+/// relevant to the question, doesn't fabricate quoted spans, and contains
+/// no modern medical advice. Costs one extra LLM call per chat request.
 /// </summary>
 public class OutputJudge(ILlmProvider llm)
 {

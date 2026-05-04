@@ -4,22 +4,18 @@ namespace AskNightingale.Services.Guardrails;
 
 
 /// <summary>
-/// Layer 3 guardrail: regex pattern filter applied BEFORE retrieval and
-/// LLM call. Cheapest, fastest layer (no embedding, no LLM cost). Catches
-/// obvious adversarial patterns by signature.
+/// Regex pattern filter on the raw user message. Cheapest, fastest layer
+/// (no embedding, no LLM cost). Six broad categories:
+/// <br/>1. Instruction override   (ignore/forget/disregard previous rules)
+/// <br/>2. Role redefinition     (you are now / act as an unrestricted X)
+/// <br/>3. Fake system tags      ( <![CDATA[</context>]]> , SYSTEM:, <![CDATA[<|im_start|>]]> )
+/// <br/>4. Authority/override    (I'm an admin / override your safety)
+/// <br/>5. Encoded payload       (long base64 blobs)
+/// <br/>6. Prompt extraction     (print/reveal your system prompt)
 ///
-/// <br/><br/>Six broad categories — each one regex covering many phrasings:
-/// <br/>1. Instruction override (ignore/forget/disregard previous rules)
-/// <br/>2. Role redefinition   (you are now / act as an unrestricted X)
-/// <br/>3. Fake system tags    ( <![CDATA[</context>]]> , SYSTEM:, <![CDATA[<|im_start|>]]> )
-/// <br/>4. Authority/override  (I'm an admin / override your safety)
-/// <br/>5. Encoded payload     (long base64 blobs)
-/// <br/>6. Prompt extraction   (print/reveal your system prompt)
-///
-/// <br/>Inherent limit: regex can't catch semantic equivalents. "Pay no
-/// attention to your prior guidance" won't match — that's PR #10
-/// (LLM-as-judge) territory. The input filter's job is to fail cheap on
-/// the obvious surface; semantic verification lives in the next layer.
+/// <br/><br/>Inherent limit: regex can't catch semantic equivalents
+/// (e.g. "pay no attention to your prior guidance"). Those rely on
+/// the system prompt and the output judge.
 /// </summary>
 public partial class InputGuard
 {
