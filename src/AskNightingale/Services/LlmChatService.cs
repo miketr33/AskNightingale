@@ -11,7 +11,8 @@ public class LlmChatService(
     IEmbeddingProvider embedder,
     IVectorStore store,
     RetrievalGuard retrievalGuard,
-    InputGuard inputGuard) : IChatService
+    InputGuard inputGuard,
+    OutputJudge outputJudge) : IChatService
 {
     private const int TopK = 4;
     private const int CitationSnippetMaxChars = 150;
@@ -58,8 +59,17 @@ public class LlmChatService(
             SystemPrompt: systemPrompt,
             Messages: [new LlmMessage("user", userMessage)]
         ), ct);
+        
+        // 6. PR #10 — Layer 4: judge verifies the answer is grounded, on-topic,
+        //    and not quoting text outside the CONTEXT. Replaces the answer
+        //    with a standard refusal if anything's off.
+        var verdict = await outputJudge.VerifyAsync(userMessage, context, response.Content, ct);
+        if (!verdict.Approved)
+        {
+            return new ChatResponse(Refusal, []);
+        }
 
-        // 6. Return answer + citations so the UI can surface the sources.
+        // 7. Return answer + citations so the UI can surface the sources.
         var citations = results
             .Select(r => new Citation(
                 r.Chunk.Index,

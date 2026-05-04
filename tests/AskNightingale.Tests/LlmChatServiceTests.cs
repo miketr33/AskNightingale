@@ -236,6 +236,67 @@ public class LlmChatServiceTests
     }
 
     [Fact]
+    public async Task Judge_approves_then_answer_passes_through()
+    {
+        var (sut, llm, embedder, store) = MakeSut();
+        StubEmbedder(embedder);
+        StubStore(store);
+        StubLlm(llm, "Florence says ventilation matters");
+
+        var result = await sut.RespondAsync("anything");
+
+        result.Content.ShouldBe("Florence says ventilation matters");
+        result.Citations.ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    public async Task Judge_rejects_then_returns_refusal_with_no_citations()
+    {
+        var (sut, llm, embedder, store) = MakeSut();
+        StubEmbedder(embedder);
+        StubStore(store);
+
+        // Chat returns an answer; override judge to REFUSE.
+        A.CallTo(() => llm.CompleteAsync(
+                A<LlmRequest>.That.Matches(r => r.SystemPrompt != null),
+                A<CancellationToken>._))
+            .Returns(new LlmResponse("Some fabricated answer with bogus quote", "model", 0, 0));
+        A.CallTo(() => llm.CompleteAsync(
+                A<LlmRequest>.That.Matches(r => r.SystemPrompt == null),
+                A<CancellationToken>._))
+            .Returns(new LlmResponse("REFUSE: answer fabricated a quote", "model", 0, 0));
+
+        var result = await sut.RespondAsync("anything");
+
+        result.Content.ShouldContain("only answer");
+        result.Citations.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Judge_receives_question_context_and_answer()
+    {
+        var (sut, llm, embedder, store) = MakeSut();
+        StubEmbedder(embedder);
+        A.CallTo(() => store.GetTopKAsync(A<float[]>._, A<int>._, A<CancellationToken>._))
+            .Returns(Task.FromResult<IReadOnlyList<RetrievalResult>>([
+                new RetrievalResult(MakeChunk(7, "ventilation requires fresh air"), 0.9f)
+            ]));
+        StubLlm(llm, "Florence says fresh air matters");
+
+        await sut.RespondAsync("ventilation question");
+
+        // Judge call: SystemPrompt=null, user message contains all three pieces.
+        A.CallTo(() => llm.CompleteAsync(
+                A<LlmRequest>.That.Matches(r =>
+                    r.SystemPrompt == null &&
+                    r.Messages[0].Content.Contains("ventilation question") &&
+                    r.Messages[0].Content.Contains("ventilation requires fresh air") &&
+                    r.Messages[0].Content.Contains("Florence says fresh air matters")),
+                A<CancellationToken>._))
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
     public async Task Refuses_input_pattern_without_calling_anything_downstream()
     {
         var (sut, llm, embedder, store) = MakeSut();
@@ -268,7 +329,8 @@ public class LlmChatServiceTests
             }).Build();
         var retrievalGuard = new RetrievalGuard(config);
         var inputGuard = new InputGuard();
-        return (new LlmChatService(llm, embedder, store, retrievalGuard, inputGuard), llm, embedder, store);
+        var outputJudge = new OutputJudge(llm);
+        return (new LlmChatService(llm, embedder, store, retrievalGuard, inputGuard, outputJudge), llm, embedder, store);
     }
 
     // Default stub returns one high-scoring chunk so MakeSut's default
@@ -284,9 +346,23 @@ public class LlmChatServiceTests
             .Returns(Task.FromResult<IReadOnlyList<RetrievalResult>>(
                 [new RetrievalResult(new Chunk(0, "default chunk", 0), 1.0f)]));
 
-    private static void StubLlm(ILlmProvider llm, string reply) =>
-        A.CallTo(() => llm.CompleteAsync(A<LlmRequest>._, A<CancellationToken>._))
+    // Differentiates chat calls (SystemPrompt populated by GroundedSystemPrompt)
+    // from judge calls (SystemPrompt = null; prompt lives in the user message).
+    // Default judge response is APPROVE so existing tests that just check
+    // the chat answer still pass through. Tests that need the judge to
+    // reject explicitly override the second matcher.
+    private static void StubLlm(ILlmProvider llm, string reply)
+    {
+        A.CallTo(() => llm.CompleteAsync(
+                A<LlmRequest>.That.Matches(r => r.SystemPrompt != null),
+                A<CancellationToken>._))
             .Returns(new LlmResponse(reply, "model", 0, 0));
+
+        A.CallTo(() => llm.CompleteAsync(
+                A<LlmRequest>.That.Matches(r => r.SystemPrompt == null),
+                A<CancellationToken>._))
+            .Returns(new LlmResponse("APPROVE", "model", 0, 0));
+    }
 
     private static Chunk MakeChunk(int index, string text) => new(index, text, 0);
 }

@@ -104,8 +104,8 @@ public class EvalRunnerTests
         await bootstrapper.EnsureLoadedAsync();
         var retrievalGuard = new RetrievalGuard(config);
         var inputGuard = new InputGuard();
-
-        return new LlmChatService(llm, embedder, store, retrievalGuard, inputGuard);
+        var outputJudge = new OutputJudge(llm);
+        return new LlmChatService(llm, embedder, store, retrievalGuard, inputGuard, outputJudge);
     }
 
     private static IReadOnlyList<EvalCase> LoadCases(string path)

@@ -32,6 +32,7 @@ builder.Services.AddTransient<RagBootstrapper>();
 // to code: PR #8 retrieval threshold, PR #9 input filter, PR #10 output judge.
 builder.Services.AddSingleton<RetrievalGuard>();
 builder.Services.AddSingleton<InputGuard>();
+builder.Services.AddSingleton<OutputJudge>();
 
 // Chat service: retrieval-augmented (PR #4d-ii) with retrieval-threshold
 // short-circuit (PR #8).
