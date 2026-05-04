@@ -1,14 +1,8 @@
 namespace AskNightingale.Services.Rag;
 
-// Char-based sliding-window chunker.
-//
-// ~2000 chars ≈ ~500 tokens for English prose, which is a sensible retrieval
-// unit for top-k=4 RAG. ~200 chars overlap (~50 tokens) gives the embedding
-// enough left-context that semantic meaning isn't sliced at chunk seams.
-//
-// Char-based (not token-based) keeps the project free of a tokenizer
-// dependency. The trade-off: chunk sizes vary slightly when token density
-// varies (numbers, code, etc.). Acceptable for natural-language prose.
+// Char-based sliding-window chunker. ~2000 chars ≈ ~500 tokens for English
+// prose; ~200 chars overlap keeps semantics coherent at chunk seams.
+// Char-based (not token-based) avoids a tokenizer dependency.
 public class Chunker(int chunkSize = 2000, int overlap = 200)
 {
     public IReadOnlyList<Chunk> Split(string text)
