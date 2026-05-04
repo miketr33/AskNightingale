@@ -1,54 +1,77 @@
+@page "/"
 @page "/chat"
 @rendermode InteractiveServer
 @using AskNightingale.Services
 @inject IChatService ChatService
+@inject IJSRuntime JS
 
-<PageTitle>Chat — AskNightingale</PageTitle>
+<PageTitle>AskNightingale</PageTitle>
 
-<h1>AskNightingale</h1>
+<div class="chat">
+    <div class="chat__messages" data-testid="chat-window" @ref="_messagesEl">
+        @if (_messages.Count == 0)
+        {
+            <div class="chat__welcome">
+                <h1>Notes on Nursing</h1>
+                <p>Ask me anything from <em>Notes on Nursing</em> by Florence Nightingale (1859).</p>
+                <p class="chat__welcome-hints">Try: <span>"What does Nightingale say about ventilation?"</span></p>
+            </div>
+        }
 
-<p class="text-muted">Ask questions about <em>Notes on Nursing</em> by Florence Nightingale (1859).</p>
+        @foreach (var msg in _messages)
+        {
+            <div class="msg msg--@msg.Role.ToString().ToLower()" data-testid="chat-message">
+                <div class="msg__bubble">@msg.Content</div>
+                @if (msg.Citations is { Count: > 0 })
+                {
+                    <details class="citations" data-testid="chat-citations">
+                        <summary>Sources (@msg.Citations.Count)</summary>
+                        <ul class="citations__list">
+                            @foreach (var c in msg.Citations)
+                            {
+                                <li class="citation" data-testid="citation">
+                                    <div class="citation__head">
+                                        <span class="citation__index">§@c.ChunkIndex</span>
+                                        <span class="citation__score">@c.Score.ToString("F2")</span>
+                                    </div>
+                                    <p class="citation__snippet">@c.Snippet</p>
+                                </li>
+                            }
+                        </ul>
+                    </details>
+                }
+            </div>
+        }
+    </div>
 
-<div class="chat-window" data-testid="chat-window">
-    @foreach (var msg in _messages)
-    {
-        <div class="chat-message chat-message-@msg.Role.ToString().ToLower()" data-testid="chat-message">
-            <strong>@msg.Role</strong>
-            <p>@msg.Content</p>
-            @if (msg.Citations is { Count: > 0 })
+    <form class="chat__input" @onsubmit="SendAsync" @onsubmit:preventDefault>
+        <textarea @bind="_input"
+                  @bind:event="oninput"
+                  @onkeydown="HandleKeydownAsync"
+                  placeholder="Ask a question…"
+                  data-testid="chat-input"
+                  rows="1"
+                  disabled="@_isSending"></textarea>
+        <button type="submit"
+                class="chat__send"
+                disabled="@(_isSending || string.IsNullOrWhiteSpace(_input))"
+                data-testid="chat-send"
+                aria-label="@(_isSending ? "Thinking" : "Send")">
+            @if (_isSending)
             {
-                <details class="chat-citations" data-testid="chat-citations">
-                    <summary>Sources (@msg.Citations.Count)</summary>
-                    <ul>
-                        @foreach (var c in msg.Citations)
-                        {
-                            <li data-testid="citation">
-                                <strong>§@c.ChunkIndex</strong>
-                                <span class="citation-score">(score @c.Score.ToString("F2"))</span>
-                                <p class="citation-snippet">@c.Snippet</p>
-                            </li>
-                        }
-                    </ul>
-                </details>
+                <span class="chat__spinner" aria-hidden="true"></span>
             }
-        </div>
-    }
-</div>
-
-<div class="chat-input">
-    <textarea @bind="_input"
-              @bind:event="oninput"
-              @onkeydown="HandleKeydownAsync"
-              placeholder="Ask a question..."
-              data-testid="chat-input"
-              rows="2"
-              disabled="@_isSending"></textarea>
-    <button class="btn btn-primary"
-            @onclick="SendAsync"
-            disabled="@(_isSending || string.IsNullOrWhiteSpace(_input))"
-            data-testid="chat-send">
-        @(_isSending ? "Thinking..." : "Send")
-    </button>
+            else
+            {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     width="18" height="18" aria-hidden="true">
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+            }
+        </button>
+    </form>
 </div>
 
 @code {
@@ -59,6 +82,22 @@
     private readonly List<Message> _messages = new();
     private string _input = string.Empty;
     private bool _isSending;
+    private ElementReference _messagesEl;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_messages.Count > 0)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("scrollChatToBottom", _messagesEl);
+            }
+            catch (JSException)
+            {
+                // No JS available (e.g. test environment).
+            }
+        }
+    }
 
     private async Task SendAsync()
     {

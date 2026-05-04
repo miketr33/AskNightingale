@@ -1,17 +1,41 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <base href="/" />
     <ResourcePreloader />
-    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["AskNightingale.styles.css"]" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet />
+    <script>
+        // Inline theme init runs synchronously before content paints to avoid
+        // a flash of light theme on first paint.
+        (function () {
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia &&
+                window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved ?? (prefersDark ? 'dark' : 'light');
+            document.documentElement.dataset.theme = theme;
+
+            window.theme = {
+                current: () => document.documentElement.dataset.theme,
+                toggle: () => {
+                    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+                    document.documentElement.dataset.theme = next;
+                    localStorage.setItem('theme', next);
+                    return next;
+                }
+            };
+
+            window.scrollChatToBottom = (el) => {
+                if (el) el.scrollTop = el.scrollHeight;
+            };
+        })();
+    </script>
 </head>
 
 <body>

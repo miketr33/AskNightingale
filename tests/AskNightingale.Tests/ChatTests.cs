@@ -9,6 +9,13 @@ namespace AskNightingale.Tests;
 
 public class ChatTests : BunitContext
 {
+    public ChatTests()
+    {
+        // Chat injects IJSRuntime to auto-scroll the message list. Loose mode
+        // returns default for unmocked JS calls so tests don't fail on render.
+        JSInterop.Mode = JSRuntimeMode.Loose;
+    }
+
     [Fact]
     public void Send_button_is_disabled_when_input_is_empty()
     {
