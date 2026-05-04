@@ -60,7 +60,7 @@ public class AnthropicLlmProvider : ILlmProvider
     private record AnthropicRequest(
         [property: JsonPropertyName("model")] string Model,
         [property: JsonPropertyName("max_tokens")] int MaxTokens,
-        [property: JsonPropertyName("system")] string? System,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? System,
         [property: JsonPropertyName("messages")] AnthropicMessage[] Messages
     );
 
