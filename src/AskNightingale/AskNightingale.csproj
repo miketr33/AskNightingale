@@ -8,6 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AWSSDK.BedrockRuntime" Version="4.0.17.6" />
+    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.36" />
     <PackageReference Include="DotNetEnv" Version="3.2.0" />
   </ItemGroup>
 

@@ -1,3 +1,4 @@
+using Amazon.BedrockRuntime;
 using AskNightingale.Components;
 using AskNightingale.Services;
 using AskNightingale.Services.Embeddings;
@@ -14,7 +15,17 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddHttpClient<ILlmProvider, AnthropicLlmProvider>();
+// LLM provider switch. Anthropic API direct (default) vs Bedrock.
+var llmProvider = builder.Configuration["LLM_PROVIDER"]?.ToLowerInvariant() ?? "anthropic";
+if (llmProvider == "bedrock")
+{
+    builder.Services.AddAWSService<IAmazonBedrockRuntime>();
+    builder.Services.AddSingleton<ILlmProvider, BedrockLlmProvider>();
+}
+else
+{
+    builder.Services.AddHttpClient<ILlmProvider, AnthropicLlmProvider>();
+}
 builder.Services.AddHttpClient<IEmbeddingProvider, VoyageEmbeddingProvider>();
 
 builder.Services.AddSingleton<Chunker>();

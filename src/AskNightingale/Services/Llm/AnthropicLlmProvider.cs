@@ -3,23 +3,15 @@ using System.Text.Json.Serialization;
 
 namespace AskNightingale.Services.Llm;
 
-public class AnthropicLlmProvider : ILlmProvider
+public class AnthropicLlmProvider(HttpClient http, IConfiguration config) : ILlmProvider
 {
     private const string ApiUrl = "https://api.anthropic.com/v1/messages";
     private const string ApiVersion = "2023-06-01";
 
-    private readonly HttpClient _http;
-    private readonly string _apiKey;
-    private readonly string _model;
-
-    public AnthropicLlmProvider(HttpClient http, IConfiguration config)
-    {
-        _http = http;
-        _apiKey = config["ANTHROPIC_API_KEY"]
-            ?? throw new InvalidOperationException(
-                "ANTHROPIC_API_KEY is not configured. Set it in .env, user secrets, or environment.");
-        _model = config["ANTHROPIC_MODEL"] ?? "claude-haiku-4-5";
-    }
+    private readonly string _apiKey = config["ANTHROPIC_API_KEY"]
+                                      ?? throw new InvalidOperationException(
+                                          "ANTHROPIC_API_KEY is not configured. Set it in .env, user secrets, or environment.");
+    private readonly string _model = config["ANTHROPIC_MODEL"] ?? "claude-haiku-4-5";
 
     public async Task<LlmResponse> CompleteAsync(LlmRequest request, CancellationToken ct = default)
     {
@@ -32,14 +24,12 @@ public class AnthropicLlmProvider : ILlmProvider
                 .ToArray()
         );
 
-        using var req = new HttpRequestMessage(HttpMethod.Post, ApiUrl)
-        {
-            Content = JsonContent.Create(body)
-        };
+        using var req = new HttpRequestMessage(HttpMethod.Post, ApiUrl);
+        req.Content = JsonContent.Create(body);
         req.Headers.Add("x-api-key", _apiKey);
         req.Headers.Add("anthropic-version", ApiVersion);
 
-        using var resp = await _http.SendAsync(req, ct);
+        using var resp = await http.SendAsync(req, ct);
         if (!resp.IsSuccessStatusCode)
         {
             var error = await resp.Content.ReadAsStringAsync(ct);
