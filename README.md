@@ -53,8 +53,9 @@ and guardrails are exactly what a real hospital deployment would need —
                        └────────────┬────────────┘  injection defence, citation
                                     ▼               requirement, prompt non-
                        ┌─────────────────────────┐  disclosure.
-                       │  Anthropic Claude       │
-                       │  Haiku 4.5 / Sonnet 4.6 │
+                       │  Claude (Haiku / Sonnet)│  swappable via LLM_PROVIDER:
+                       │  Anthropic API direct   │   - "anthropic" → direct API
+                       │  or AWS Bedrock         │   - "bedrock"   → AWS Bedrock
                        └────────────┬────────────┘
                                     ▼
                        ┌─────────────────────────┐
@@ -147,6 +148,19 @@ dotnet run --project src/AskNightingale
 First boot embeds the corpus (~5 seconds, ~£0.001 of Voyage credit).
 Subsequent boots load `data/embeddings.json` from disk.
 
+### Switch to AWS Bedrock
+
+```bash
+# in .env
+LLM_PROVIDER=bedrock
+AWS_REGION=eu-west-2
+BEDROCK_MODEL_ID=eu.anthropic.claude-haiku-4-5-20251001-v1:0
+```
+
+Then `dotnet run` again. AWS credentials come from the default chain
+(env vars / `~/.aws/credentials` / IAM role) — no app-specific
+credential handling. Same chat pipeline; only the LLM endpoint changes.
+
 ### Run tests
 
 ```bash
@@ -209,6 +223,11 @@ CLAUDE.md                             — running brief + decision log
 
 - **RAG over fine-tuning** — cheaper, citable, gives a natural grounding
   refusal signal, scales to multi-document.
+- **`ILlmProvider` is genuinely swappable** — `LLM_PROVIDER=anthropic`
+  uses the direct Anthropic API; `LLM_PROVIDER=bedrock` uses AWS
+  Bedrock via the Converse API. Same chat pipeline, same eval, same
+  guardrails — only the LLM endpoint changes. The interface from PR #3
+  was the seam this was built to demonstrate.
 - **Each guardrail is its own class** under `Services/Guardrails/` —
   architecture-diagram boxes map 1:1 to code files. Layer 1 lives in
   `Services/Prompts/` because it's instruction text, not a gate; see
