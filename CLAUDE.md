@@ -77,6 +77,8 @@ user message
 - [x] PR #9: input pre-filter guardrail (Layer 3) — regex categories refuse before embedding/LLM
 - [x] PR #10: output judge guardrail (Layer 4) — LLM-as-judge verifies answer is grounded, on-topic, no fabricated quotes
 - [x] PR #11: README polish (architecture diagram, eval comparison, decision summary, project structure); `results-post-guardrails.md` committed; AnthropicLlmProvider serialisation bug fix + wire-format regression tests
+- [x] PR #12: UI polish — modern look, dark/light theme toggle, responsive layout, scaffold cruft removed
+- [x] PR #13: Bedrock LLM provider via Converse API; `LLM_PROVIDER` config switch; AWS default credential chain
 
 ## Eval results
 
@@ -317,3 +319,36 @@ Add an entry per PR, like a tiny ADR. Format:
   them; the judge is the last sieve, not the only one. **Honest
   interview line: "no single layer is reliable; defence-in-depth
   means each layer's failure modes are independent."**
+- **2026-05-05 — UI polish (PR #12).** Stripped the Blazor scaffold's
+  purple sidebar + "About" top-row entirely. Single-column app shell:
+  header with brand + theme toggle, then chat fills the rest. Custom
+  CSS with theme variables on `[data-theme="light"|"dark"]`; inline
+  `<script>` in `<head>` reads localStorage / `prefers-color-scheme`
+  and sets the attribute *pre-paint* to avoid a flash of light theme.
+  Stable layout: 100dvh shell so mobile keyboard doesn't break things;
+  fixed-size send button (icon ↔ spinner, same dimensions) so it
+  doesn't jump on send; auto-scroll to bottom on every render via
+  `IJSRuntime` (defensive try/catch so bUnit tests don't break).
+- **2026-05-05 — Bedrock LLM provider via Converse API (PR #13).**
+  Considered: InvokeModel API (Anthropic-specific JSON shape).
+  Picked Converse because the request/response shape is unified
+  across Bedrock providers (Claude, Llama, Mistral, etc.) — the same
+  `BedrockLlmProvider` works for all of them; no per-provider
+  translation. Same `ILlmProvider` contract the rest of the chat
+  pipeline already uses; `LlmChatService` doesn't know which provider
+  is wired in.
+- **2026-05-05 — Config switch over factory pattern.** Considered:
+  `ILlmProviderFactory` resolving the right impl per request. Picked
+  simple `if (LLM_PROVIDER == "bedrock")` in `Program.cs` — single app
+  instance, single provider per run; demo flips by editing `.env` and
+  restarting. Factory would be premature abstraction.
+- **2026-05-05 — AWS default credential chain via `AddAWSService<>`.**
+  Reads creds from env vars → `~/.aws/credentials` → IAM role
+  automatically. No bespoke credential handling, no AWS objects
+  leaking into the chat pipeline beyond the typed `IAmazonBedrockRuntime`
+  client.
+- **2026-05-05 — Bedrock model uses cross-region inference profile
+  prefix (`eu.anthropic.claude-...`).** In `eu-west-2` Claude models are
+  served via inference profiles, not direct model IDs — the `eu.`
+  prefix is the route. Transparent to our code; just a different string
+  in `BEDROCK_MODEL_ID`.
